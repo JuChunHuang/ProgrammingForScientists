@@ -16,9 +16,9 @@ type Boid struct {
 //It contains a width parameter indicating the boundary of the sky, as well as a slice of Boid objects.
 //It also contains the system parameters.
 type Sky struct {
-	width                                             float64
-	boids                                             []Boid
-	maxBoidSpeed                                      float64 //fastest speed that a boid can fly
-	proximity                                         float64 // used to determine if boids are close enough for forces to apply
-	separationFactor, alignmentFactor, cohesionFactor float64 //multiply by each respective force
+	width                                                float64
+	boids                                                []Boid
+	max_boid_speed                                       float64 //fastest speed that a boid can fly
+	proximity                                            float64 // used to determine if boids are close enough for forces to apply
+	separation_factor, alignment_factor, cohesion_factor float64 //multiply by each respective force
 }

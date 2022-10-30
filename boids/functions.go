@@ -7,47 +7,47 @@ import (
 // SimulateBoids simulates the boids system over numGens generations starting with initialSky using a time step.
 // Input: an initial Sky object, a number of generations, and a time interval (in seconds).
 // Output: a slice of numGens + 1 total Sky objects.
-func SimulateBoids(initialSky Sky, numGens int, timeStep float64) []Sky {
-	timePoints := make([]Sky, numGens+1)
-	timePoints[0] = initialSky
+func SimulateBoids(initial_sky Sky, num_gens int, time_step float64) []Sky {
+	time_points := make([]Sky, num_gens+1)
+	time_points[0] = initial_sky
 
 	//now range over the number of generations and update the Sky each time
-	for i := 1; i <= numGens; i++ {
-		timePoints[i] = UpdateSky(timePoints[i-1], timeStep)
+	for i := 1; i <= num_gens; i++ {
+		time_points[i] = UpdateSky(time_points[i-1], time_step)
 	}
 
-	return timePoints
+	return time_points
 }
 
 // UpdateSkye updates a given Sky over a specified time interval (in seconds).
 // Input: a Sky object and a float time.
 // Output: a Sky object corresponding to simulating gravity over time seconds, assuming that acceleration is constant over this time.
-func UpdateSky(currentSky Sky, timeStep float64) Sky {
-	newSky := CopySky(currentSky)
+func UpdateSky(current_sky Sky, time_step float64) Sky {
+	new_sky := CopySky(current_sky)
 
-	for i := range newSky.boids {
+	for i := range new_sky.boids {
 		// range over all boids in the sky and update their acceleration, velocity, and position
-		newSky.boids[i].acceleration = UpdateAcceleration(currentSky, newSky.boids[i])
-		newSky.boids[i].velocity = UpdateVelocity(newSky.boids[i], newSky.maxBoidSpeed, timeStep)
-		newSky.boids[i].position = UpdatePosition(newSky.boids[i], timeStep)
+		new_sky.boids[i].acceleration = UpdateAcceleration(current_sky, new_sky.boids[i])
+		new_sky.boids[i].velocity = UpdateVelocity(new_sky.boids[i], new_sky.max_boid_speed, time_step)
+		new_sky.boids[i].position = UpdatePosition(new_sky.boids[i], time_step)
 
 		// examine whether boids fly off the edge of the board, if so, let them back
-		if !InBoard(newSky.boids[i], newSky.width) {
-			newSky.boids[i].position = UpdateTorusPosition(newSky.boids[i], newSky.width)
+		if !InBoard(new_sky.boids[i], new_sky.width) {
+			new_sky.boids[i].position = UpdateTorusPosition(new_sky.boids[i], new_sky.width)
 		}
 	}
 
-	return newSky
+	return new_sky
 }
 
 // UpdateAcceleration updates boid's acceleration over a specified time interval (in seconds).
 // Input: Sky object and a boid b
 // Output: the net acceleration on b due to net force calculated by every boid in the Sky
-func UpdateAcceleration(currentSky Sky, b Boid) OrderedPair {
+func UpdateAcceleration(current_sky Sky, b Boid) OrderedPair {
 	var accel OrderedPair
 
 	//compute net force vector acting on b
-	force := ComputeNetForce(currentSky, b)
+	force := ComputeNetForce(current_sky, b)
 
 	//now, calculate acceleration. Since mass is equal to 1, F = a.
 	accel.x = force.x
@@ -59,47 +59,47 @@ func UpdateAcceleration(currentSky Sky, b Boid) OrderedPair {
 // ComputeNetForce sums the all forces within a threshold distance acting on the boid b
 // Input: A Sky objects and an individual boid
 // Output: the net force vector (OrderedPair) acting on the given boid
-func ComputeNetForce(currentSky Sky, b Boid) OrderedPair {
-	var netForce OrderedPair
-	numUnderThres := 0
-	for i := range currentSky.boids {
+func ComputeNetForce(current_sky Sky, b Boid) OrderedPair {
+	var net_force OrderedPair
+	num_under_thres := 0
+	for i := range current_sky.boids {
 		// only do a force computation if current boid is not the input boid b
-		if currentSky.boids[i] != b {
-			d := Distance(b.position, currentSky.boids[i].position)
+		if current_sky.boids[i] != b {
+			d := Distance(b.position, current_sky.boids[i].position)
 			// only do a force computation if current boid stays within a threshold distance of b
-			if d <= currentSky.proximity {
-				numUnderThres += 1
-				force := ComputeForce(b, currentSky.boids[i], d, currentSky.separationFactor, currentSky.alignmentFactor, currentSky.cohesionFactor)
+			if d <= current_sky.proximity {
+				num_under_thres += 1
+				force := ComputeForce(b, current_sky.boids[i], d, current_sky.separation_factor, current_sky.alignment_factor, current_sky.cohesion_factor)
 
 				//now add its components into net force components
-				netForce.x += force.x
-				netForce.y += force.y
+				net_force.x += force.x
+				net_force.y += force.y
 			}
 		}
 	}
 
 	// average all these forces to obtain a final force
-	if numUnderThres > 0 {
-		netForce.x /= float64(numUnderThres)
-		netForce.y /= float64(numUnderThres)
+	if num_under_thres > 0 {
+		net_force.x /= float64(num_under_thres)
+		net_force.y /= float64(num_under_thres)
 	} else {
-		return netForce
+		return net_force
 	}
 
-	return netForce
+	return net_force
 }
 
 // ComputeForce computes the total three forces
 // Input: two Boid objects and three force factors
 // Output: the force due to three rules (as a vector) acting on b1 subject to b2.
-func ComputeForce(b1, b2 Boid, d, separationFactor, alignmentFactor, cohesionFactor float64) OrderedPair {
+func ComputeForce(b1, b2 Boid, d, separation_factor, alignment_factor, cohesion_factor float64) OrderedPair {
 	var force OrderedPair
-	separationForce := ChangeDueToSeparation(b1.position, b2.position, d, separationFactor)
-	alignmentForce := ChangeDueToAlignment(b2.velocity, d, alignmentFactor)
-	cohesionForce := ChangeDueToCohesion(b1.position, b2.position, d, cohesionFactor)
+	separation_force := ChangeDueToSeparation(b1.position, b2.position, d, separation_factor)
+	alignment_force := ChangeDueToAlignment(b2.velocity, d, alignment_factor)
+	cohesion_force := ChangeDueToCohesion(b1.position, b2.position, d, cohesion_factor)
 
-	force.x = separationForce.x + alignmentForce.x + cohesionForce.x
-	force.y = separationForce.y + alignmentForce.y + cohesionForce.y
+	force.x = separation_force.x + alignment_force.x + cohesion_force.x
+	force.y = separation_force.y + alignment_force.y + cohesion_force.y
 
 	return force
 }
@@ -107,86 +107,86 @@ func ComputeForce(b1, b2 Boid, d, separationFactor, alignmentFactor, cohesionFac
 // ChangeDueToSeparation calculates the force due to separation of nearby boids which are within a threshold distance
 // Input: two positions of the two Boid objects, a threshold distance, and a factor that dictates the magnitude of the separation force
 // Output: the force due to separation rule acting on p1 subject to p2
-func ChangeDueToSeparation(p1, p2 OrderedPair, d, separationFactor float64) OrderedPair {
-	var separationForce OrderedPair
-	separationForce.x = separationFactor * (p1.x - p2.x) / (d * d)
-	separationForce.y = separationFactor * (p1.y - p2.y) / (d * d)
+func ChangeDueToSeparation(p1, p2 OrderedPair, d, separationd_factor float64) OrderedPair {
+	var separation_force OrderedPair
+	separation_force.x = separationd_factor * (p1.x - p2.x) / (d * d)
+	separation_force.y = separationd_factor * (p1.y - p2.y) / (d * d)
 
-	return separationForce
+	return separation_force
 }
 
 // ChangeDueToAlignment calculates the force due to alignment of nearby boids which are within a threshold distance
 // Input: one velocity vector of the nearby boid, a threshold distance, and a factor that dictates the magnitude of the alignment force
 // Output: the force due to alignment rule due to the nearby boid
-func ChangeDueToAlignment(v OrderedPair, d, alignmentFactor float64) OrderedPair {
-	var alignmentForce OrderedPair
-	alignmentForce.x = alignmentFactor * v.x / d
-	alignmentForce.y = alignmentFactor * v.y / d
+func ChangeDueToAlignment(v OrderedPair, d, alignment_factor float64) OrderedPair {
+	var alignment_force OrderedPair
+	alignment_force.x = alignment_factor * v.x / d
+	alignment_force.y = alignment_factor * v.y / d
 
-	return alignmentForce
+	return alignment_force
 }
 
 // ChangeDueToCohesion calculates the force due to cohesion of nearby boids which are within a threshold distance
 // Input: two positions of the two Boid objects, a threshold distance, and a factor that dictates the magnitude of the cohesion force
 // Output: the force due to cohesion rule acting on p1 subject to p2
-func ChangeDueToCohesion(p1, p2 OrderedPair, d, cohesionFactor float64) OrderedPair {
-	var cohesionForce OrderedPair
-	cohesionForce.x = cohesionFactor * (p2.x - p1.x) / d
-	cohesionForce.y = cohesionFactor * (p2.y - p1.y) / d
+func ChangeDueToCohesion(p1, p2 OrderedPair, d, cohesion_factor float64) OrderedPair {
+	var cohesion_force OrderedPair
+	cohesion_force.x = cohesion_factor * (p2.x - p1.x) / d
+	cohesion_force.y = cohesion_factor * (p2.y - p1.y) / d
 
-	return cohesionForce
+	return cohesion_force
 }
 
 // UpdateVelocity updates the velocity of a given Boid object over a specified time interval (in seconds) and ensure each boid's speed does not exceed the maximum speed.
 // Input: a Boid object, a maximum speed of the system, and a time step (float64).
 // Output: the orderedPair corresponding to the velocity of this object after a single time step, using the boid's current acceleration.
-func UpdateVelocity(b Boid, maxBoidSpeed, time float64) OrderedPair {
-	var newVelocity OrderedPair
-	newVelocity.x = b.acceleration.x*time + b.velocity.x
-	newVelocity.y = b.acceleration.y*time + b.velocity.y
+func UpdateVelocity(b Boid, max_boid_speed, time float64) OrderedPair {
+	var new_velocity OrderedPair
+	new_velocity.x = b.acceleration.x*time + b.velocity.x
+	new_velocity.y = b.acceleration.y*time + b.velocity.y
 
-	netVelocity := math.Sqrt(newVelocity.x*newVelocity.x + newVelocity.y*newVelocity.y)
+	net_velocity := math.Sqrt(new_velocity.x*new_velocity.x + new_velocity.y*new_velocity.y)
 	// make sure each boid's speed is at most equal to the maximum speed of the system
-	if netVelocity > maxBoidSpeed {
-		reducedCoefficient := maxBoidSpeed / netVelocity
-		newVelocity.x *= reducedCoefficient
-		newVelocity.y *= reducedCoefficient
+	if net_velocity > max_boid_speed {
+		reduced_coefficient := max_boid_speed / net_velocity
+		new_velocity.x *= reduced_coefficient
+		new_velocity.y *= reduced_coefficient
 	}
 
-	return newVelocity
+	return new_velocity
 }
 
 // UpdatePosition updates the position of a given Boid object over a specified time interval (in seconds).
 // Input: a Boid b and a time step (float64).
 // Output: the OrderedPair corresponding to the updated position of the boid after a single time step, using the boid's current acceleration and velocity.
 func UpdatePosition(b Boid, time float64) OrderedPair {
-	var newPosition OrderedPair
-	newPosition.x = 0.5*b.acceleration.x*time*time + b.velocity.x*time + b.position.x
-	newPosition.y = 0.5*b.acceleration.y*time*time + b.velocity.y*time + b.position.y
+	var new_position OrderedPair
+	new_position.x = 0.5*b.acceleration.x*time*time + b.velocity.x*time + b.position.x
+	new_position.y = 0.5*b.acceleration.y*time*time + b.velocity.y*time + b.position.y
 
-	return newPosition
+	return new_position
 }
 
 // UpdateTorusPosition updats the position of a given Boid object which flys off the edge of the board
 // Input: a Boid b and the width of the Sky
 // Output: the OrderedPair corresponding to the boid that should be confined to the Sky
 func UpdateTorusPosition(b Boid, width float64) OrderedPair {
-	var newPosition OrderedPair
-	newPosition.x = b.position.x
-	newPosition.y = b.position.y
+	var new_position OrderedPair
+	new_position.x = b.position.x
+	new_position.y = b.position.y
 
 	if b.position.x > width {
-		newPosition.x = b.position.x - width
+		new_position.x = b.position.x - width
 	} else if b.position.x < 0 {
-		newPosition.x = b.position.x + width
+		new_position.x = b.position.x + width
 	}
 	if b.position.y > width {
-		newPosition.y = b.position.y - width
+		new_position.y = b.position.y - width
 	} else if b.position.y < 0 {
-		newPosition.y = b.position.y + width
+		new_position.y = b.position.y + width
 	}
 
-	return newPosition
+	return new_position
 }
 
 // InBoard examines whether the boid is flying away (outside the Sky)
@@ -201,31 +201,31 @@ func InBoard(b Boid, width float64) bool {
 // CopySky
 // Input: a Sky object
 // Output: a new Sky object, all of whose fields are copied over into the new Sky's fields. (Deep copy)
-func CopySky(currentSky Sky) Sky {
-	var newSky Sky
+func CopySky(current_sky Sky) Sky {
+	var new_sky Sky
 
-	newSky.width = currentSky.width
-	newSky.maxBoidSpeed = currentSky.maxBoidSpeed
-	newSky.proximity = currentSky.proximity
-	newSky.separationFactor = currentSky.separationFactor
-	newSky.alignmentFactor = currentSky.alignmentFactor
-	newSky.cohesionFactor = currentSky.cohesionFactor
+	new_sky.width = current_sky.width
+	new_sky.max_boid_speed = current_sky.max_boid_speed
+	new_sky.proximity = current_sky.proximity
+	new_sky.separation_factor = current_sky.separation_factor
+	new_sky.alignment_factor = current_sky.alignment_factor
+	new_sky.cohesion_factor = current_sky.cohesion_factor
 
 	// make the new sky's slice of Boid objects
-	numBoids := len(currentSky.boids)
-	newSky.boids = make([]Boid, numBoids)
+	numBoids := len(current_sky.boids)
+	new_sky.boids = make([]Boid, numBoids)
 
 	// copy all of the boids' fields into our new boids
-	for i := range currentSky.boids {
-		newSky.boids[i].position.x = currentSky.boids[i].position.x
-		newSky.boids[i].position.y = currentSky.boids[i].position.y
-		newSky.boids[i].velocity.x = currentSky.boids[i].velocity.x
-		newSky.boids[i].velocity.y = currentSky.boids[i].velocity.y
-		newSky.boids[i].acceleration.x = currentSky.boids[i].acceleration.x
-		newSky.boids[i].acceleration.y = currentSky.boids[i].acceleration.y
+	for i := range current_sky.boids {
+		new_sky.boids[i].position.x = current_sky.boids[i].position.x
+		new_sky.boids[i].position.y = current_sky.boids[i].position.y
+		new_sky.boids[i].velocity.x = current_sky.boids[i].velocity.x
+		new_sky.boids[i].velocity.y = current_sky.boids[i].velocity.y
+		new_sky.boids[i].acceleration.x = current_sky.boids[i].acceleration.x
+		new_sky.boids[i].acceleration.y = current_sky.boids[i].acceleration.y
 	}
 
-	return newSky
+	return new_sky
 }
 
 //Distance takes two position ordered pairs and it returns the distance between these two points in 2-D space.
