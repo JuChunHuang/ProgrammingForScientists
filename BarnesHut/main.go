@@ -120,8 +120,8 @@ func CollisionSimulation() {
 	g0 := InitializeGalaxy(500, 4e21, 5e22, 4e22)
 	g1 := InitializeGalaxy(500, 4e21, 4e22, 4e22)
 
-	push(&g0, OrderedPair{-100, 200})
-	push(&g1, OrderedPair{200, -100})
+	Push(&g0, OrderedPair{-100, 200})
+	Push(&g1, OrderedPair{200, -100})
 
 	width := 1.0e23
 	galaxies := []Galaxy{g0, g1}
@@ -143,11 +143,4 @@ func CollisionSimulation() {
 	fmt.Println("Images drawn. Now generating GIF.")
 	gifhelper.ImagesToGIF(image_list, "collision")
 	fmt.Println("GIF drawn.")
-}
-
-func push(g *Galaxy, v OrderedPair) {
-	for _, s := range *g {
-		s.velocity.x += v.x
-		s.velocity.y += v.y
-	}
 }

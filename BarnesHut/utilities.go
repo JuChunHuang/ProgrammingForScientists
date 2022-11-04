@@ -76,3 +76,11 @@ func (s *Star) CalculateTheta(node *Node) float64 {
 
 	return float64(node.sector.width) / d
 }
+
+// Push pushes the galaxy to an assigned direction.
+func Push(g *Galaxy, v OrderedPair) {
+	for _, s := range *g {
+		s.velocity.x += v.x
+		s.velocity.y += v.y
+	}
+}
