@@ -1,0 +1,115 @@
+/******************************************************************************
+ *  Description: one-time pad encryption (decryption)
+ *  Encryption:
+ *    Input: random seed, message length, message 
+ *    Output: 0 (for decryption after), message length, result, generated key
+ *  Decryption:
+ *    Input: random seed, message length, encrypted message, key 
+ *    Output: message length, original message
+ ******************************************************************************/
+
+/ Let seed stored in mem[FE]
+/ Let message length stored in mem[FD]
+/ Let R[1] always be 1
+/ Let the first input num always stored in mem[00A0] and after
+/ Let the key always stored in mem[00C0] and after
+
+10: 7101   R[1] <- 0001                  
+11: 82FF   read R[2]                     
+12: 92FE   M[FE] <- R[2]                 mem[FE]=seed
+13: 82FF   read R[2]                     
+14: 92FD   M[FD] <- R[2]                 mem[FD]=cnt
+15: FF30   R[F] <- PC; goto 30           call ReadFirstNum to read the first num
+
+16: 82FE   R[2] <- M[FE]                 
+17: D250   if (R[2] > 0) goto 50         encrypting: goto Encryption
+18: FF39   R[F] <- PC; goto 39           decrypting: call ReadSecondNum
+
+/ Decryption
+19: 82FD   R[2] <- M[FD]                 
+1A: 92FF   write R[2]                    output message length
+1B: 75A0   R[5] <- 00A0                  
+1C: 76C0   R[6] <- 00C0                  
+1D: FF70   R[F] <- PC; goto 70           do R[5] XOR R[6], store in R[5]
+1E: 75A0   R[5] <- 00A0                  
+1F: FF80   R[F] <- PC; goto 80           output result
+20: 0000   halt                          
+
+/ ReadFirstNum
+30: 73A0   R[3] <- 00A0                  set the location for the first num
+31: 82FD   R[2] <- M[FD]                 read message length
+32: C238   if (R[2] == 0) goto 38        keep reading input num
+33: 84FF   read R[4]                     
+34: B403   M[R[3]] <- R[4]               store in mem[A0] and so on
+35: 2221   R[2] <- R[2] - R[1]           
+36: 1331   R[3] <- R[3] + R[1]           
+37: C032   goto 32                       
+38: EF00   goto R[F]                     
+
+/ ReadSecondNum (decryption)
+39: 73C0   R[3] <- 00C0                  set the location for the second num
+3A: 82FD   R[2] <- M[FD]                 read message length
+3B: C241   if (R[2] == 0) goto 41        
+3C: 84FF   read R[4]                     
+3D: B403   M[R[3]] <- R[4]               store in mem[C0] and so on
+3E: 2221   R[2] <- R[2] - R[1]           
+3F: 1331   R[3] <- R[3] + R[1]           
+40: C03B   goto 3B                       
+41: EF00   goto R[F]                     
+
+/ Encryption
+50: 73C0   R[3] <- 00C0                  
+51: 90FF   write R[0]                    output 0 first
+52: 82FD   R[2] <- M[FD]                 
+53: 92FF   write R[2]                    output message length
+54: 84FE   R[4] <- M[FE]                 R[4]=seed (R_0 for generator)
+55: C25B   if (R[2] == 0) goto 5B        
+56: FF90   R[F] <- PC; goto 90           generate a random num
+57: B403   M[R[3]] <- R[4]               store the num in mem[C0] and so on
+58: 2221   R[2] <- R[2] - R[1]           
+59: 1331   R[3] <- R[3] + R[1]           
+5A: C055   goto 55                       
+5B: 75A0   R[5] <- 00A0                                
+5C: 76C0   R[6] <- 00C0                  
+5D: FF70   R[F] <- PC; goto 70           do R[5] XOR R[6], store in R[5]
+5E: 75A0   R[5] <- 00A0                  
+5F: FF80   R[F] <- PC; goto 80           output result              
+60: 75C0   R[5] <- 00C0                   
+61: FF80   R[F] <- PC; goto 80           output key
+62: 0000   halt                          
+
+             
+
+/ mem1(R[5]) XOR mem2(R[6])
+70: 82FD   R[2] <- M[FD]                 
+71: C27A   if (R[2] == 0) goto 7A        
+72: A705   R[7] <- M[R[5]]               
+73: A806   R[8] <- M[R[6]]               
+74: 4778   R[7] <- R[7] ^ R[8]           XOR operation
+75: B705   M[R[5]] <- R[7]               store the result in mem[A0]
+76: 1551   R[5] <- R[5] + R[1]           
+77: 1661   R[6] <- R[6] + R[1]           
+78: 2221   R[2] <- R[2] - R[1]           
+79: C071   goto 71                       
+7A: EF00   goto R[F]                     
+
+/ Output n numbers (start from R[5])
+80: 82FD   R[2] <- M[FD]                 
+81: C287   if (R[2] == 0) goto 87        
+82: A605   R[6] <- M[R[5]]               
+83: 96FF   write R[6]                    
+84: 2221   R[2] <- R[2] - R[1]           
+85: 1551   R[5] <- R[5] + R[1]           
+86: C081   goto 81                       
+87: EF00   goto R[F]                     
+
+/ Generate a random number and store in R[4]
+/ f(R)=(aR+c)%m, where a=2^4+1, c=1, m=2^16
+90: 7510   R[5] <- 0010                      
+91: 1640   R[6] <- R[4]                  copy value for the later multiplication           
+92: C596   if (R[5] == 0) goto 96        
+93: 1446   R[4] <- R[4] + R[6]           
+94: 2551   R[5] <- R[5] - R[1]           
+95: C092   goto 92                       
+96: 1441   R[4] <- R[4] + R[1]           
+97: EF00   goto R[F]                     
